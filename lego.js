@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Сделано задание на звездочку
@@ -6,84 +6,125 @@
  */
 exports.isStar = true;
 
+const AllMethods = [
+    "and",
+    "or",
+    "filterIn",
+    "sortBy",
+    "select",
+    "format",
+    "limit",
+];
+
 /**
  * Запрос к коллекции
  * @param {Array} collection
  * @params {...Function} – Функции для запроса
  * @returns {Array}
  */
-exports.query = function (collection) {
-    return collection;
+exports.query = function (collection, ...selectors) {
+    const selection = JSON.parse(JSON.stringify(collection));
+    return selectors
+        .sort((a, b) => AllMethods.indexOf(a.name) - AllMethods.indexOf(b.name))
+        .reduce((result, selector) => {
+            return selector(result);
+        }, selection);
 };
 
 /**
  * Выбор полей
  * @params {...String}
  */
-exports.select = function () {
-    return;
-};
+exports.select = (...properties) =>
+    function select(collection) {
+        return collection.map((item) => {
+            return properties
+                .filter((property) => {
+                    return item.hasOwnProperty(property);
+                })
+                .reduce((result, property) => {
+                    result[property] = item[property];
+
+                    return result;
+                }, {});
+        });
+    };
 
 /**
  * Фильтрация поля по массиву значений
  * @param {String} property – Свойство для фильтрации
  * @param {Array} values – Доступные значения
  */
-exports.filterIn = function (property, values) {
-    console.info(property, values);
+exports.filterIn = (property, values) =>
+    function filterIn(collection) {
+        // console.info(property, values);
 
-    return;
-};
+        return collection.filter((item) => values.includes(item[property]));
+    };
 
 /**
  * Сортировка коллекции по полю
  * @param {String} property – Свойство для фильтрации
  * @param {String} order – Порядок сортировки (asc - по возрастанию; desc – по убыванию)
  */
-exports.sortBy = function (property, order) {
-    console.info(property, order);
+exports.sortBy = (property, order) =>
+    function sortBy(collection) {
+        // console.info(property, order);
 
-    return;
-};
+        return collection.sort((a, b) => {
+            return order === "asc"
+                ? a[property] - b[property]
+                : b[property] - a[property];
+        });
+    };
 
 /**
  * Форматирование поля
  * @param {String} property – Свойство для фильтрации
  * @param {Function} formatter – Функция для форматирования
  */
-exports.format = function (property, formatter) {
-    console.info(property, formatter);
+exports.format = (property, formatter) =>
+    function format(collection) {
+        // console.info(property, formatter);
 
-    return;
-};
+        return collection.map((item) =>
+            Object.assign({}, item, { [property]: formatter(item[property]) })
+        );
+    };
 
 /**
  * Ограничение количества элементов в коллекции
  * @param {Number} count – Максимальное количество элементов
  */
-exports.limit = function (count) {
-    console.info(count);
+exports.limit = (count) =>
+    function limit(collection) {
+        // console.info(count);
 
-    return;
-};
+        return collection.slice(0, count);
+    };
 
 if (exports.isStar) {
-
     /**
      * Фильтрация, объединяющая фильтрующие функции
      * @star
      * @params {...Function} – Фильтрующие функции
      */
-    exports.or = function () {
-        return;
-    };
+    exports.or = (...selectors) =>
+        function or(collection) {
+            return collection.filter((item) =>
+                selectors.some((selector) => selector([item]).length > 0)
+            );
+        };
 
     /**
      * Фильтрация, пересекающая фильтрующие функции
      * @star
      * @params {...Function} – Фильтрующие функции
      */
-    exports.and = function () {
-        return;
-    };
+    exports.and = (...selectors) =>
+        function and(collection) {
+            return collection.filter((item) =>
+                selectors.every((selector) => selector([item]).length > 0)
+            );
+        };
 }
